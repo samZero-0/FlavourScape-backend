@@ -60,6 +60,29 @@ async function run() {
             res.send(result);
         });
 
+        app.patch('/allFoods/:id', async (req, res) => {
+            const id = req.params.id;
+            const filter = { _id: new ObjectId(id) };
+            const options = { upsert: true };
+            const updatedFood = req.body;
+        
+            
+            const food = {
+                $set: {
+                    Quantity: updatedFood.quan, 
+                    SoldCount: updatedFood.newSoldCount, 
+                }
+            };
+        
+            try {
+                const result = await foodsCollection.updateOne(filter, food, options);
+                res.status(200).send(result);
+            } catch (error) {
+                console.error('Error updating food:', error);
+                res.status(500).send({ message: 'Failed to update food', error });
+            }
+        });
+
 
 
 
