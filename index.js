@@ -24,7 +24,7 @@ const client = new MongoClient(uri, {
 
         const database = client.db('Assignment-11');
         const foodsCollection = database.collection('allFoods');
-
+        const ordersCollection = database.collection('orders');
 
 
 async function run() {
@@ -47,6 +47,12 @@ async function run() {
             const result = await foodsCollection.findOne(query);
             res.send(result);
         })
+
+        app.post('/orders', async (req, res) => {
+            const newEquipment = req.body;
+            const result = await ordersCollection.insertOne(newEquipment);
+            res.send(result);
+        });
 
 
 
