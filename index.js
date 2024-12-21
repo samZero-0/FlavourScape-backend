@@ -49,8 +49,14 @@ async function run() {
         })
 
         app.post('/orders', async (req, res) => {
-            const newEquipment = req.body;
-            const result = await ordersCollection.insertOne(newEquipment);
+            const newOrder = req.body;
+            const result = await ordersCollection.insertOne(newOrder);
+            res.send(result);
+        });
+
+        app.get('/orders', async (req, res) => {
+            const cursor = ordersCollection.find();
+            const result = await cursor.toArray();
             res.send(result);
         });
 
