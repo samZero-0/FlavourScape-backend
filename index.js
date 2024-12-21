@@ -22,6 +22,11 @@ const client = new MongoClient(uri, {
     }
 });
 
+        const database = client.db('Assignment-11');
+        const foodsCollection = database.collection('allFoods');
+
+
+
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
@@ -30,7 +35,12 @@ async function run() {
         // await client.db("admin").command({ ping: 1 });
         // console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
-       
+        app.get('/allFoods', async (req, res) => {
+            const cursor = foodsCollection.find();
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
 
 
 
