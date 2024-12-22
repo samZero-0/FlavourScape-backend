@@ -98,6 +98,20 @@ async function run() {
             res.send(result);
         })
 
+        app.post('/allFoods', async (req, res) => {
+            const newFood= req.body;
+            const result = await foodsCollection.insertOne(newFood);
+            res.send(result);
+        });
+
+        app.get('/allFoods/byEmail/:email', async (req, res) => {
+            const email = req.params.email;
+            const query = {addedByEmail: `${email}`}
+            const cursor = foodsCollection.find(query);
+            const result = await cursor.toArray();
+            res.send(result);
+        });
+
 
 
 
