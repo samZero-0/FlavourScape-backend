@@ -17,8 +17,11 @@ const jwt = require('jsonwebtoken');
 app.use(cors(
     {
         origin: [
+            'http://localhost:5173',
+            'http://localhost:5174',
             'http://localhost:5175',
-          
+            'https://assignment-11-c95a9.web.app'
+
         ], 
         credentials: true,
     }
@@ -126,13 +129,21 @@ async function run() {
 
 
         // Other APIs
-        app.get('/allFoods', async (req, res) => {
-            
-            console.log( req.cookies?.token);
 
-            const cursor = foodsCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
+        app.get('/allFoods', async (req, res) => {
+
+            const page = parseInt(req.query.page); // Parse the page number
+            const size = parseInt(req.query.size); // Parse the size of items per page
+    
+      try {
+          const result = await foodsCollection.find()
+              .skip(page * size)
+              .limit(size)
+              .toArray();
+          res.send(result);
+      } catch (error) {
+          res.status(500).send({ error: 'An error occurred while fetching products.' });
+      }
            
         });
 
@@ -149,11 +160,18 @@ async function run() {
             res.send(result);
         });
 
-        app.get('/orders', async (req, res) => {
-            const cursor = ordersCollection.find();
-            const result = await cursor.toArray();
-            res.send(result);
+        app.get('/orders', verifyToken, async (req, res) => {
+            try {
+                // Optionally, filter orders by the user's email if needed
+                const query = { BuyerEmail: req.user.email }; // Assuming orders are linked to a BuyerEmail
+                const cursor = ordersCollection.find(query);
+                const result = await cursor.toArray();
+                res.send(result);
+            } catch (error) {
+                res.status(500).send({ message: 'Failed to fetch orders', error });
+            }
         });
+        
 
         app.patch('/allFoods/:id', async (req, res) => {
             const id = req.params.id;
@@ -178,7 +196,13 @@ async function run() {
             }
         });
 
-        app.get('/orders/:email', async (req, res) => {
+        app.get('/orders/:email', verifyToken, async (req, res) => {
+
+            console.log(req.params.email);
+
+            if (req.user.email !== req.params.email) {
+                return res.status(403).send({ message: 'forbidden access' })
+            }
             const email = req.params.email;
             const query = {BuyerEmail: `${email}`}
             const cursor = ordersCollection.find(query);
@@ -201,7 +225,7 @@ async function run() {
 
         app.get('/allFoods/byEmail/:email' , verifyToken,  async (req, res) => {
 
-            
+            console.log(req.params.email);
 
             if (req.user.email !== req.params.email) {
                 return res.status(403).send({ message: 'forbidden access' })
@@ -215,11 +239,8 @@ async function run() {
         });
 
 
-        app.patch('/allFoods/update/:id' , async (req, res) => {
+        app.patch('/allFoods/update/:id' , verifyToken,  async (req, res) => {
 
-            // if (req.user.email !== req.query.email) {
-            //     return res.status(403).send({ message: 'forbidden access' })
-            // }
 
             const id = req.params.id;
             const filter = { _id: new ObjectId(id) };
@@ -246,7 +267,10 @@ async function run() {
             }
         });
 
-        
+        app.get('/foodCount', async(req, res) => {
+            const count = await foodsCollection.estimatedDocumentCount();
+            res.send({count});
+        })
         
 
 
