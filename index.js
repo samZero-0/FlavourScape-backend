@@ -1,5 +1,6 @@
 
 
+const { initializeVectorStore } = require('./services/vector');
 const express = require("express");
 const cookieParser = require('cookie-parser');
 const app = express();
@@ -10,6 +11,7 @@ const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 dotenv.config();    
 const port = process.env.PORT || 5000;
 const jwt = require('jsonwebtoken');
+const { HuggingFaceTransformersEmbeddings } = require("@langchain/community/embeddings/hf_transformers");
 
 
 
@@ -29,6 +31,8 @@ app.use(cors(
 app.use(cookieParser());
 app.use(express.json());
 
+// Vector store instance
+let vectorStore;
 
 
 // custom middleware
@@ -50,7 +54,53 @@ const verifyToken = (req, res, next) => {
     })
 }
 
+// Chatbot Search Endpoint
+app.post('/api/chatbot/search', async (req, res) => {
+    try {
+      const { query } = req.body;
+      if (!vectorStore) {
+        vectorStore = await initializeVectorStore();
+      }
+      
+      // Get more results than needed to account for duplicates
+      const rawResults = await vectorStore.similaritySearch(query, 5);
+      
+      // Deduplicate results by content
+      const uniqueResults = [];
+      const seenContent = new Set();
+      
+      for (const result of rawResults) {
+        const content = result.pageContent.trim();
+        if (!seenContent.has(content)) {
+          seenContent.add(content);
+          uniqueResults.push({
+            text: content,
+            source: result.metadata.source,
+            section: result.metadata.section
+          });
+          
+          // Stop when we have enough unique results
+          if (uniqueResults.length >= 3) break;
+        }
+      }
+      
+      res.json({ results: uniqueResults });
+    } catch (error) {
+      console.error("Search error:", error);
+      res.status(500).json({ error: "Search failed" });
+    }
+  });
 
+// Admin Endpoint to Refresh Vectors
+app.post('/admin/refresh-vectors', verifyToken, async (req, res) => {
+    try {
+        vectorStore = await initializeVectorStore();
+        res.send({ status: 'Vector store updated successfully' });
+    } catch (error) {
+        console.error("Refresh error:", error);
+        res.status(500).send({ error: "Failed to refresh vectors" });
+    }
+});
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.k2nj4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -102,7 +152,8 @@ async function run() {
         //         .send({ success: true })
         // })
 
-
+        vectorStore = await initializeVectorStore();
+        console.log("Vector store initialized successfully");
 
         app.post('/jwt', async(req,res)=>{
             const user = req.body;
@@ -272,6 +323,23 @@ async function run() {
             res.send({count});
         })
         
+
+         app.get('/api/test-search', async (req, res) => {
+                try {
+                const testQuery = "What is the flavor profile of this food?";
+                const results = await vectorStore.similaritySearch(testQuery, 2);
+                res.json({
+                    success: true,
+                    query: testQuery,
+                    results: results.map(r => ({
+                    content: r.pageContent,
+                    metadata: r.metadata
+                    }))
+                });
+                } catch (error) {
+                res.status(500).json({ error: error.message });
+                }
+            });
 
 
     } finally {
