@@ -43,7 +43,7 @@ const verifyToken = (req, res, next) => {
     })
 }
 
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.k2nj4.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
+const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.lzwyzdb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
 
 const client = new MongoClient(uri, {
@@ -62,10 +62,10 @@ const ordersCollection = database.collection('orders');
 async function run() {
     try {
         // Connect the client to the server (optional starting in v4.7)
-        // await client.connect();
+        await client.connect();
         // Send a ping to confirm a successful connection
-        // await client.db("admin").command({ ping: 1 });
-        // console.log("Pinged your deployment. You successfully connected to MongoDB!");
+        await client.db("admin").command({ ping: 1 });
+        console.log("Pinged your deployment. You successfully connected to MongoDB!");
 
         app.post('/jwt', async (req, res) => {
             const user = req.body;
